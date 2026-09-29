@@ -1,0 +1,7 @@
+barrio,direccion,lat,lon,categoria,color,icono
+Aranjuez - Parque Principal,Parque Principal de Aranjuez (Contenedores desbordados),6.272100,-75.557400, Acumulación de Basuras,orange,trash
+Aranjuez - Calle 92,Calle 92 (Deficiencia de sumideros / Inundación),6.283100,-75.557900, Inundación Frecuente / Riesgo Hídrico,cadetblue,tint
+Campo Valdés,Esquina Calle 82 # 50A (Escombros y residuos),6.278540,-75.559200, Acumulación de Basuras,orange,trash
+San Isidro,Sector Central (Acumulación de residuos comerciales),6.275000,-75.561200, Acumulación de Basuras,orange,trash
+La Piñuela,Vía Principal (Enlagunamiento por lluvias),6.269500,-75.554200, Inundación Frecuente / Riesgo Hídrico,cadetblue,tint
+La Quiebra,Parte Alta (Inestabilidad de talud y ladera),6.289917,-75.562519, Deslizamiento de Tierra / Talud,red,warning-sign
