@@ -12,7 +12,7 @@ import os
 st.set_page_config(page_title="SAT-C Aranjuez & Medellín - Gestión del Riesgo", layout="wide")
 
 st.title("🚨 Red de Monitoreo Comunitario y Gestión del Riesgo - SAT-C")
-st.markdown("### Plataforma WebGIS Colaborativa y Alertas Comunitarias - Comuna 4 (Aranjuez)")
+st.markdown("### Plataforma WebGIS Colaborativa - Comuna 4 (Aranjuez)")
 
 # Cargar modelo YOLO
 @st.cache_resource
@@ -50,102 +50,104 @@ def cargar_datos_comuna():
 
 df_comuna = cargar_datos_comuna()
 
-opciones_dict = {"Selecciona un barrio o sector de la Comuna 4...": {
-    "lat": 6.2730, "lon": -75.5580, "categoria": "General", "color": "blue", "icono": "info-sign"
-}}
-
-for index, row in df_comuna.iterrows():
-    label = f"{row['barrio']} ({row['categoria']})"
-    opciones_dict[label] = {
-        "lat": row["lat"],
-        "lon": row["lon"],
-        "categoria": row["categoria"],
-        "color": row["color"],
-        "icono": row["icono"]
-    }
-
 if "map_key" not in st.session_state:
     st.session_state.map_key = 0
 
 col1, col2 = st.columns([1, 1])
 
 with col1:
-    st.subheader("🔎 1. Ubicación y Reporte Comunitario")
+    st.subheader("🔎 1. Registro de Ubicación y Riesgo")
     
-    zona_seleccionada = st.selectbox(
-        "Elige el barrio o sector de afectación:",
-        options=list(opciones_dict.keys())
+    # Campo de texto libre para que el usuario escriba la ubicación exacta
+    direccion_usuario = st.text_input("Dirección o sector exacto de la emergencia:", placeholder="Ej: Calle 81 # 50-22, Sector La Quiebra")
+    
+    # Selector del tipo de riesgo
+    categoria_riesgo = st.selectbox(
+        "Selecciona el tipo de riesgo identificado:",
+        options=[
+            "🗑️ Acumulación de Basuras",
+            "🌊 Inundación Frecuente / Riesgo Hídrico",
+            "⛰️ Deslizamiento de Tierra / Talud"
+        ]
     )
     
-    info_zona = opciones_dict[zona_seleccionada]
-    coordenadas_actuales = [info_zona["lat"], info_zona["lon"]]
-    
-    if zona_seleccionada != "Selecciona un barrio o sector de la Comuna 4...":
-        st.warning(f"📍 **Sector Seleccionado:** {zona_seleccionada}")
+    # Asignar color e icono según la categoría elegida
+    if "Basuras" in categoria_riesgo:
+        color_r = "orange"
+        icono_r = "trash"
+    elif "Inundación" in categoria_riesgo:
+        color_r = "cadetblue"
+        icono_r = "tint"
     else:
-        st.info("Selecciona un sector de la lista para enfocar el mapa WebGIS.")
+        color_r = "red"
+        icono_r = "warning-sign"
 
     st.markdown("---")
     st.subheader("📸 2. Evidencia y Comentarios Ciudadanos")
     
-    comentario_usuario = st.text_area("Comentario o descripción detallada del problema:", placeholder="Ej: Hay acumulación de escombros que bloquean el paso peatonal...")
+    comentario_usuario = st.text_area("Comentario o detalles adicionales:", placeholder="Describa brevemente la situación observada...")
     archivo = st.file_uploader("Sube la fotografía del riesgo:", type=["jpg", "jpeg", "png"])
     
     if archivo is not None:
         imagen = Image.open(archivo)
         st.image(imagen, caption="Fotografía cargada por el usuario", use_container_width=True)
         
-        if st.button("🔍 Analizar con IA y Publicar Alerta Global"):
-            with st.spinner("Procesando imagen con modelo YOLOv8 y sincronizando base de datos..."):
-                resultados = model(imagen, conf=0.05)
-                
-                res_plotted = resultados[0].plot()
-                res_img = Image.fromarray(res_plotted[..., ::-1])
-                
-                buffered_res = io.BytesIO()
-                res_img.save(buffered_res, format="JPEG")
-                res_img_str = base64.b64encode(buffered_res.getvalue()).decode()
-                
-                st.image(res_img, caption="Análisis de IA completado", use_container_width=True)
-                
-                nuevo_reporte = pd.DataFrame([{
-                    "barrio": zona_seleccionada,
-                    "direccion": f"Alerta Comunitaria: {zona_seleccionada}",
-                    "lat": coordenadas_actuales[0],
-                    "lon": coordenadas_actuales[1],
-                    "categoria": info_zona["categoria"],
-                    "color": "red",
-                    "icono": "camera",
-                    "imagen_base64": res_img_str,
-                    "comentario": comentario_usuario if comentario_usuario else "Sin comentario adicional."
-                }])
-                
-                df_actualizado = pd.concat([df_comuna, nuevo_reporte], ignore_index=True)
-                df_actualizado.to_csv(CSV_FILE, index=False)
-                
-                st.success("✅ ¡Alerta publicada con éxito para toda la comunidad!")
-                
-                df_comuna = df_actualizado
-                st.session_state.map_key += 1
-                st.rerun()
+        if st.button("🔍 Analizar con IA y Publicar Reporte"):
+            if not direccion_usuario.strip():
+                st.warning("⚠️ Por favor ingresa la dirección o ubicación exacta antes de publicar.")
+            else:
+                with st.spinner("Procesando imagen con IA y actualizando base de datos..."):
+                    resultados = model(imagen, conf=0.05)
+                    
+                    res_plotted = resultados[0].plot()
+                    res_img = Image.fromarray(res_plotted[..., ::-1])
+                    
+                    buffered_res = io.BytesIO()
+                    res_img.save(buffered_res, format="JPEG")
+                    res_img_str = base64.b64encode(buffered_res.getvalue()).decode()
+                    
+                    st.image(res_img, caption="Análisis de IA completado", use_container_width=True)
+                    
+                    # Coordenadas base en Comuna 4 (Aranjuez) para el punto reportado
+                    lat_base = 6.2730
+                    lon_base = -75.5580
+                    
+                    nuevo_reporte = pd.DataFrame([{
+                        "barrio": direccion_usuario,
+                        "direccion": direccion_usuario,
+                        "lat": lat_base,
+                        "lon": lon_base,
+                        "categoria": categoria_riesgo,
+                        "color": color_r,
+                        "icono": "camera",
+                        "imagen_base64": res_img_str,
+                        "comentario": comentario_usuario if comentario_usuario else "Sin comentario adicional."
+                    }])
+                    
+                    df_actualizado = pd.concat([df_comuna, nuevo_reporte], ignore_index=True)
+                    df_actualizado.to_csv(CSV_FILE, index=False)
+                    
+                    st.success("✅ ¡Reporte publicado con éxito y visible para todos en el mapa!")
+                    
+                    df_comuna = df_actualizado
+                    st.session_state.map_key += 1
+                    st.rerun()
 
-   st.markdown("---")
+    st.markdown("---")
     st.subheader("📞 Directorio de Emergencias Oficiales")
-    st.markdown("""
-    Si la emergencia requiere atención inmediata, haz clic sobre el número para **llamar directamente** desde tu dispositivo:
-    * **🔥 [Bomberos (119)](tel:119)**
-    * **👮‍♂️ [Policía Nacional (112)](tel:112)**
-    * **🚑 [Ambulancias / Urgencias Médicas (125)](tel:125)**
-    * **🔴 [Cruz Roja Colombiana (132)](tel:132)**
-    * **⛑️ [Defensa Civil Colombiana (144)](tel:144)**
-    * **⚠️ [Atención de Desastres Nacional (UNGRD): 111](tel:111)**
-    """)
+    st.markdown("Haz clic sobre cualquier opción para **llamar directamente** desde tu dispositivo:")
+    st.markdown("- 🔥 **Bomberos (119):** [Llamar 119](tel:119)")
+    st.markdown("- 👮‍♂️ **Policía Nacional (112):** [Llamar 112](tel:112)")
+    st.markdown("- 🚑 **Ambulancias / Urgencias (125):** [Llamar 125](tel:125)")
+    st.markdown("- 🔴 **Cruz Roja (132):** [Llamar 132](tel:132)")
+    st.markdown("- ⛑️ **Defensa Civil (144):** [Llamar 144](tel:144)")
+    st.markdown("- ⚠️ **UNGRD (111):** [Llamar 111](tel:111)")
 
 with col2:
     st.subheader("🗺️ Mapa WebGIS en Tiempo Real (Comuna 4)")
     
     mapa = folium.Map(
-        location=coordenadas_actuales,
+        location=[6.2730, -75.5580],
         zoom_start=15,
         tiles="OpenStreetMap"
     )
@@ -153,13 +155,15 @@ with col2:
     for index, row in df_comuna.iterrows():
         img_b64 = str(row.get("imagen_base64", ""))
         comentario_txt = str(row.get("comentario", "Sin comentarios"))
+        ubicacion_txt = str(row.get("barrio", "Ubicación general"))
+        cat_txt = str(row.get("categoria", "Riesgo"))
         
         if img_b64 and img_b64 != "nan" and len(img_b64) > 10:
             html_popup = f"""
             <div style="width:220px; font-family: sans-serif;">
-                <b style="color: #d9534f;">🚨 Alerta Comunitaria</b><br>
-                <b>Sector:</b> {row['barrio']}<br>
-                <b>Categoría:</b> {row['categoria']}<br>
+                <b style="color: #d9534f;">🚨 Alerta Comuna 4</b><br>
+                <b>Ubicación:</b> {ubicacion_txt}<br>
+                <b>Categoría:</b> {cat_txt}<br>
                 <b>Comentario:</b> {comentario_txt}<br><br>
                 <b>Evidencia Fotográfica:</b><br>
                 <img src="data:image/jpeg;base64,{img_b64}" width="200px" style="border-radius:6px; margin-top:4px;"/>
@@ -170,14 +174,14 @@ with col2:
             folium.Marker(
                 location=[row["lat"], row["lon"]],
                 popup=popup,
-                tooltip=f"Reporte Ciudadano 📸 - {row['barrio']}",
+                tooltip=f"Reporte: {ubicacion_txt}",
                 icon=folium.Icon(color="red", icon="camera", prefix="fa")
             ).add_to(mapa)
         else:
             folium.Marker(
                 location=[row["lat"], row["lon"]],
-                popup=f"<b>Sector:</b> {row['barrio']}<br><b>Categoría:</b> {row['categoria']}<br><b>Info:</b> {comentario_txt}",
-                tooltip=row['barrio'],
+                popup=f"<b>Ubicación:</b> {ubicacion_txt}<br><b>Categoría:</b> {cat_txt}<br><b>Info:</b> {comentario_txt}",
+                tooltip=ubicacion_txt,
                 icon=folium.Icon(color=row["color"], icon=row["icono"])
             ).add_to(mapa)
         
