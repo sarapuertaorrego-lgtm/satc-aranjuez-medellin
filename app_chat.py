@@ -23,7 +23,7 @@ model = cargar_modelo()
 
 CSV_FILE = "barrios_comuna4.csv"
 
-# Cargar base de datos
+# Cargar base de datos con persistencia
 def cargar_datos_comuna():
     if os.path.exists(CSV_FILE):
         df = pd.read_csv(CSV_FILE)
@@ -35,14 +35,14 @@ def cargar_datos_comuna():
     else:
         data = {
             "barrio": ["Aranjuez - Parque Principal", "Campo Valdés"],
-            "direccion": ["Parque Principal", "Calle 82"],
+            "direccion": ["Parque Principal de Aranjuez", "Calle 82"],
             "lat": [6.272100, 6.278540],
             "lon": [-75.557400, -75.559200],
             "categoria": ["🗑️ Acumulación de Basuras", "🗑️ Acumulación de Basuras"],
             "color": ["orange", "orange"],
             "icono": ["trash", "trash"],
             "imagen_base64": ["", ""],
-            "comentario": ["Punto crítico histórico", "Contenedores colapsados"]
+            "comentario": ["Punto crítico histórico de contenedores", "Acumulación recurrente de residuos"]
         }
         df = pd.DataFrame(data)
         df.to_csv(CSV_FILE, index=False)
@@ -58,7 +58,7 @@ col1, col2 = st.columns([1, 1])
 with col1:
     st.subheader("🔎 1. Registro de Ubicación y Riesgo")
     
-    # Campo de texto libre para que el usuario escriba la ubicación exacta
+    # Campo de texto libre para la dirección exacta
     direccion_usuario = st.text_input("Dirección o sector exacto de la emergencia:", placeholder="Ej: Calle 81 # 50-22, Sector La Quiebra")
     
     # Selector del tipo de riesgo
@@ -71,7 +71,7 @@ with col1:
         ]
     )
     
-    # Asignar color e icono según la categoría elegida
+    # Asignar color e icono según la categoría
     if "Basuras" in categoria_riesgo:
         color_r = "orange"
         icono_r = "trash"
@@ -108,7 +108,7 @@ with col1:
                     
                     st.image(res_img, caption="Análisis de IA completado", use_container_width=True)
                     
-                    # Coordenadas base en Comuna 4 (Aranjuez) para el punto reportado
+                    # Coordenadas base en Comuna 4 para ubicar el reporte en el sector central
                     lat_base = 6.2730
                     lon_base = -75.5580
                     
@@ -127,7 +127,7 @@ with col1:
                     df_actualizado = pd.concat([df_comuna, nuevo_reporte], ignore_index=True)
                     df_actualizado.to_csv(CSV_FILE, index=False)
                     
-                    st.success("✅ ¡Reporte publicado con éxito y visible para todos en el mapa!")
+                    st.success("✅ ¡Reporte publicado con éxito y guardado en la base de datos!")
                     
                     df_comuna = df_actualizado
                     st.session_state.map_key += 1
@@ -152,12 +152,14 @@ with col2:
         tiles="OpenStreetMap"
     )
     
+    # Recorrer todos los registros de la base de datos (CSV)
     for index, row in df_comuna.iterrows():
         img_b64 = str(row.get("imagen_base64", ""))
         comentario_txt = str(row.get("comentario", "Sin comentarios"))
         ubicacion_txt = str(row.get("barrio", "Ubicación general"))
         cat_txt = str(row.get("categoria", "Riesgo"))
         
+        # Si el registro tiene una foto guardada en base64, mostrar marcador con camarita 📸
         if img_b64 and img_b64 != "nan" and len(img_b64) > 10:
             html_popup = f"""
             <div style="width:220px; font-family: sans-serif;">
@@ -174,10 +176,11 @@ with col2:
             folium.Marker(
                 location=[row["lat"], row["lon"]],
                 popup=popup,
-                tooltip=f"Reporte: {ubicacion_txt}",
+                tooltip=f"Reporte Ciudadano 📸 - {ubicacion_txt}",
                 icon=folium.Icon(color="red", icon="camera", prefix="fa")
             ).add_to(mapa)
         else:
+            # Marcador predefinido del sector
             folium.Marker(
                 location=[row["lat"], row["lon"]],
                 popup=f"<b>Ubicación:</b> {ubicacion_txt}<br><b>Categoría:</b> {cat_txt}<br><b>Info:</b> {comentario_txt}",
