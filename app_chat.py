@@ -129,16 +129,16 @@ with col1:
                 st.session_state.map_key += 1
                 st.rerun()
 
-    st.markdown("---")
+   st.markdown("---")
     st.subheader("📞 Directorio de Emergencias Oficiales")
     st.markdown("""
-    Si la emergencia requiere atención inmediata de las autoridades, comunícate a las líneas oficiales:
-    * **🔥 Bomberos:** `119`[cite: 10]
-    * **👮‍♂️ Policía Nacional:** `112`[cite: 10]
-    * **🚑 Ambulancias / Urgencias Médicas:** `125`[cite: 10]
-    * ** cruz Roja Colombiana:** `132`[cite: 10]
-    * **⛑️ Defensa Civil Colombiana:** `144`[cite: 10]
-    * **⚠️ Atención de Desastres Nacional (UNGRD):** `111`[cite: 10]
+    Si la emergencia requiere atención inmediata, haz clic sobre el número para **llamar directamente** desde tu dispositivo:
+    * **🔥 [Bomberos (119)](tel:119)**
+    * **👮‍♂️ [Policía Nacional (112)](tel:112)**
+    * **🚑 [Ambulancias / Urgencias Médicas (125)](tel:125)**
+    * **🔴 [Cruz Roja Colombiana (132)](tel:132)**
+    * **⛑️ [Defensa Civil Colombiana (144)](tel:144)**
+    * **⚠️ [Atención de Desastres Nacional (UNGRD): 111](tel:111)**
     """)
 
 with col2:
