@@ -23,7 +23,11 @@ model = cargar_modelo()
 
 CSV_FILE = "barrios_comuna4.csv"
 
-# Cargar base de datos con persistencia
+# Inicializar estado de sesión para reportes persistentes
+if "reportes_activos" not in st.session_state:
+    st.session_state.reportes_activos = []
+
+# Cargar base de datos inicial y sincronizar con la sesión
 def cargar_datos_comuna():
     if os.path.exists(CSV_FILE):
         df = pd.read_csv(CSV_FILE)
@@ -50,6 +54,20 @@ def cargar_datos_comuna():
 
 df_comuna = cargar_datos_comuna()
 
+# Sancionar los reportes del CSV a la sesión si existen imágenes guardadas
+if len(st.session_state.reportes_activos) == 0:
+    for _, row in df_comuna.iterrows():
+        img_b64 = str(row.get("imagen_base64", ""))
+        if img_b64 and img_b64 != "nan" and len(img_b64) > 10:
+            st.session_state.reportes_activos.append({
+                "barrio": row["barrio"],
+                "lat": row["lat"],
+                "lon": row["lon"],
+                "categoria": row["categoria"],
+                "imagen_base64": img_b64,
+                "comentario": row.get("comentario", "Sin comentarios")
+            })
+
 if "map_key" not in st.session_state:
     st.session_state.map_key = 0
 
@@ -58,10 +76,8 @@ col1, col2 = st.columns([1, 1])
 with col1:
     st.subheader("🔎 1. Registro de Ubicación y Riesgo")
     
-    # Campo de texto libre para la dirección exacta
     direccion_usuario = st.text_input("Dirección o sector exacto de la emergencia:", placeholder="Ej: Calle 81 # 50-22, Sector La Quiebra")
     
-    # Selector del tipo de riesgo
     categoria_riesgo = st.selectbox(
         "Selecciona el tipo de riesgo identificado:",
         options=[
@@ -71,7 +87,6 @@ with col1:
         ]
     )
     
-    # Asignar color e icono según la categoría
     if "Basuras" in categoria_riesgo:
         color_r = "orange"
         icono_r = "trash"
@@ -96,7 +111,7 @@ with col1:
             if not direccion_usuario.strip():
                 st.warning("⚠️ Por favor ingresa la dirección o ubicación exacta antes de publicar.")
             else:
-                with st.spinner("Procesando imagen con IA y actualizando base de datos..."):
+                with st.spinner("Procesando imagen con IA y actualizando registro..."):
                     resultados = model(imagen, conf=0.05)
                     
                     res_plotted = resultados[0].plot()
@@ -108,11 +123,23 @@ with col1:
                     
                     st.image(res_img, caption="Análisis de IA completado", use_container_width=True)
                     
-                    # Coordenadas base en Comuna 4 para ubicar el reporte en el sector central
+                    # Coordenadas base en Comuna 4 para ubicar el reporte
                     lat_base = 6.2730
                     lon_base = -75.5580
                     
-                    nuevo_reporte = pd.DataFrame([{
+                    # Agregar al estado de sesión persistente
+                    nuevo_reporte_dict = {
+                        "barrio": direccion_usuario,
+                        "lat": lat_base,
+                        "lon": lon_base,
+                        "categoria": categoria_riesgo,
+                        "imagen_base64": res_img_str,
+                        "comentario": comentario_usuario if comentario_usuario else "Sin comentario adicional."
+                    }
+                    st.session_state.reportes_activos.append(nuevo_reporte_dict)
+                    
+                    # Guardar también en el CSV físico
+                    nuevo_reporte_df = pd.DataFrame([{
                         "barrio": direccion_usuario,
                         "direccion": direccion_usuario,
                         "lat": lat_base,
@@ -124,12 +151,11 @@ with col1:
                         "comentario": comentario_usuario if comentario_usuario else "Sin comentario adicional."
                     }])
                     
-                    df_actualizado = pd.concat([df_comuna, nuevo_reporte], ignore_index=True)
+                    df_actualizado = pd.concat([df_comuna, nuevo_reporte_df], ignore_index=True)
                     df_actualizado.to_csv(CSV_FILE, index=False)
                     
-                    st.success("✅ ¡Reporte publicado con éxito y guardado en la base de datos!")
+                    st.success("✅ ¡Reporte publicado con éxito y guardado en el sistema!")
                     
-                    df_comuna = df_actualizado
                     st.session_state.map_key += 1
                     st.rerun()
 
@@ -152,40 +178,37 @@ with col2:
         tiles="OpenStreetMap"
     )
     
-    # Recorrer todos los registros de la base de datos (CSV)
+    # 1. Dibujar los puntos predefinidos base del CSV que no tienen foto de reporte ciudadano
     for index, row in df_comuna.iterrows():
         img_b64 = str(row.get("imagen_base64", ""))
-        comentario_txt = str(row.get("comentario", "Sin comentarios"))
-        ubicacion_txt = str(row.get("barrio", "Ubicación general"))
-        cat_txt = str(row.get("categoria", "Riesgo"))
-        
-        # Si el registro tiene una foto guardada en base64, mostrar marcador con camarita 📸
-        if img_b64 and img_b64 != "nan" and len(img_b64) > 10:
-            html_popup = f"""
-            <div style="width:220px; font-family: sans-serif;">
-                <b style="color: #d9534f;">🚨 Alerta Comuna 4</b><br>
-                <b>Ubicación:</b> {ubicacion_txt}<br>
-                <b>Categoría:</b> {cat_txt}<br>
-                <b>Comentario:</b> {comentario_txt}<br><br>
-                <b>Evidencia Fotográfica:</b><br>
-                <img src="data:image/jpeg;base64,{img_b64}" width="200px" style="border-radius:6px; margin-top:4px;"/>
-            </div>
-            """
-            popup = folium.Popup(html_popup, max_width=250)
-            
+        if not img_b64 or img_b64 == "nan" or len(img_b64) <= 10:
             folium.Marker(
                 location=[row["lat"], row["lon"]],
-                popup=popup,
-                tooltip=f"Reporte Ciudadano 📸 - {ubicacion_txt}",
-                icon=folium.Icon(color="red", icon="camera", prefix="fa")
-            ).add_to(mapa)
-        else:
-            # Marcador predefinido del sector
-            folium.Marker(
-                location=[row["lat"], row["lon"]],
-                popup=f"<b>Ubicación:</b> {ubicacion_txt}<br><b>Categoría:</b> {cat_txt}<br><b>Info:</b> {comentario_txt}",
-                tooltip=ubicacion_txt,
+                popup=f"<b>Ubicación:</b> {row['barrio']}<br><b>Categoría:</b> {row['categoria']}<br><b>Info:</b> {row.get('comentario', '')}",
+                tooltip=row['barrio'],
                 icon=folium.Icon(color=row["color"], icon=row["icono"])
             ).add_to(mapa)
+
+    # 2. Dibujar todos los reportes activos almacenados en la sesión (con su respectiva foto y camarita 📸)
+    for r in st.session_state.reportes_activos:
+        img_b64 = r["imagen_base64"]
+        html_popup = f"""
+        <div style="width:220px; font-family: sans-serif;">
+            <b style="color: #d9534f;">🚨 Alerta Comuna 4</b><br>
+            <b>Ubicación:</b> {r['barrio']}<br>
+            <b>Categoría:</b> {r['categoria']}<br>
+            <b>Comentario:</b> {r['comentario']}<br><br>
+            <b>Evidencia Fotográfica:</b><br>
+            <img src="data:image/jpeg;base64,{img_b64}" width="200px" style="border-radius:6px; margin-top:4px;"/>
+        </div>
+        """
+        popup = folium.Popup(html_popup, max_width=250)
+        
+        folium.Marker(
+            location=[r["lat"], r["lon"]],
+            popup=popup,
+            tooltip=f"Reporte Ciudadano 📸 - {r['barrio']}",
+            icon=folium.Icon(color="red", icon="camera", prefix="fa")
+        ).add_to(mapa)
         
     st_folium(mapa, width=550, height=620, key=f"mapa_{st.session_state.map_key}")
