@@ -1,7 +1,16 @@
-barrio,direccion,lat,lon,categoria,color,icono
-Aranjuez - Parque Principal,Parque Principal de Aranjuez (Contenedores desbordados),6.272100,-75.557400, Acumulación de Basuras,orange,trash
-Aranjuez - Calle 92,Calle 92 (Deficiencia de sumideros / Inundación),6.283100,-75.557900, Inundación Frecuente / Riesgo Hídrico,cadetblue,tint
-Campo Valdés,Esquina Calle 82 # 50A (Escombros y residuos),6.278540,-75.559200, Acumulación de Basuras,orange,trash
-San Isidro,Sector Central (Acumulación de residuos comerciales),6.275000,-75.561200, Acumulación de Basuras,orange,trash
-La Piñuela,Vía Principal (Enlagunamiento por lluvias),6.269500,-75.554200, Inundación Frecuente / Riesgo Hídrico,cadetblue,tint
-La Quiebra,Parte Alta (Inestabilidad de talud y ladera),6.289917,-75.562519, Deslizamiento de Tierra / Talud,red,warning-sign
+barrio,direccion,lat,lon,categoria,color,icono,imagen_base64,comentario
+Moravia,Sector El Morro / Proximidad Río Medellín y Q. La Bermejala,6.279800,-75.564200,⛰️ Deslizamiento de Tierra / Talud,red,warning-sign,,Riesgo alto en laderas informales y cercanía a antiguo botadero.
+Moravia,Vía Principal Moravia (Inundación hídrica),6.281200,-75.563000,🌊 Inundación Frecuente / Riesgo Hídrico,cadetblue,tint,,Vulnerabilidad por proximidad al Río Medellín y taponamiento de alcantarillas.
+Berlín,Sector Inmediaciones Q. La Bermejala y El Molino,6.286500,-75.560100,🌊 Inundación Frecuente / Riesgo Hídrico,cadetblue,tint,,Insuficiencia de drenajes públicos ante lluvias intensas.
+San Isidro,Sector Central y Retiros de Quebradas,6.275000,-75.561200,🗑️ Acumulación de Basuras,orange,trash,,Residuos comerciales y falta de cultura de disposición de escombros.
+Palermo,Zona Residencial cercana a Ejes Hídricos,6.271000,-75.562000,🌊 Inundación Frecuente / Riesgo Hídrico,cadetblue,tint,,Viviendas asentadas sobre fajas de retiro de quebradas.
+Aranjuez,Parque Principal y Eje Comercial,6.272100,-75.557400,🗑️ Acumulación de Basuras,orange,trash,,Punto crítico por desborde de contenedores comunitarios y escombros.
+Sevilla,Vías Principales y Ejes Viales,6.267500,-75.560500,🌊 Inundación Frecuente / Riesgo Hídrico,cadetblue,tint,,Inundaciones recurrentes de vías públicas por deficiencia de desagües.
+San Pedro,Sector Hospitalario y Residencial,6.265000,-75.564000,🗑️ Acumulación de Basuras,orange,trash,,Acumulación de escombros de construcción en aceras y zonas verdes.
+Campo Valdés No. 1,Esquina Calle 82 # 50A,6.278540,-75.559200,🗑️ Acumulación de Basuras,orange,trash,,Arrojo clandestino de escombros y residuos sólidos.
+Las Esmeraldas,Partes Bajas / Convergencia Comuna 3,6.276200,-75.555000,🌊 Inundación Frecuente / Riesgo Hídrico,cadetblue,tint,,Riesgo moderado-alto por flujos de agua que bajan desde Manrique.
+La Piñuela,Vía Principal / Zona Baja,6.269500,-75.554200,🌊 Inundación Frecuente / Riesgo Hídrico,cadetblue,tint,,Enlagunamiento por lluvias y escorrentía urbana.
+Bermejal – Los Álamos,Microcuencas Urbanas,6.284000,-75.563500,🌊 Inundación Frecuente / Riesgo Hídrico,cadetblue,tint,,Afectaciones directas por el comportamiento torrencial de microcuencas.
+Miranda,Puntos Ciegos y Laderas,6.263500,-75.561500,🗑️ Acumulación de Basuras,orange,trash,,Presencia de puntos ciegos utilizados para arrojar basuras y escombros.
+Brasilia,Sector Central Residencial,6.273500,-75.559500,🗑️ Acumulación de Basuras,orange,trash,,Deterioro de espacio público y taponamiento de desagües naturales.
+Manrique Central No. 1,Límite con Comuna 3 y Laderas,6.281500,-75.555500,⛰️ Deslizamiento de Tierra / Talud,red,warning-sign,,Inestabilidad de taludes y escorrentía en temporada de lluvias.
