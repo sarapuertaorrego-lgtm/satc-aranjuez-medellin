@@ -12,7 +12,7 @@ import os
 st.set_page_config(page_title="SAT-C Aranjuez & Medellín - Gestión del Riesgo", layout="wide")
 
 st.title("🚨 Red de Monitoreo Comunitario y Gestión del Riesgo - SAT-C")
-st.markdown("### Plataforma WebGIS Colaborativa - Comuna 4 (Aranjuez)")
+st.markdown("### Plataforma WebGIS Interactiva con Filtros, Métricas y Alertas - Comuna 4 (Aranjuez)")
 
 # Cargar modelo YOLO
 @st.cache_resource
@@ -54,7 +54,7 @@ def cargar_datos_comuna():
 
 df_comuna = cargar_datos_comuna()
 
-# Sancionar los reportes del CSV a la sesión si existen imágenes guardadas
+# Sincronizar reportes del CSV a la sesión si existen imágenes guardadas
 if len(st.session_state.reportes_activos) == 0:
     for _, row in df_comuna.iterrows():
         img_b64 = str(row.get("imagen_base64", ""))
@@ -70,6 +70,21 @@ if len(st.session_state.reportes_activos) == 0:
 
 if "map_key" not in st.session_state:
     st.session_state.map_key = 0
+
+# --- PANEL DE MÉTRICAS Y DASHBOARD SUPERIOR ---
+total_alertas_base = len(df_comuna)
+total_reportes_ciudadanos = len(st.session_state.reportes_activos)
+total_basura = len(df_comuna[df_comuna['categoria'].str.contains("Basuras", na=False)]) + sum(1 for r in st.session_state.reportes_activos if "Basuras" in r['categoria'])
+total_inundacion = len(df_comuna[df_comuna['categoria'].str.contains("Inundación", na=False)]) + sum(1 for r in st.session_state.reportes_activos if "Inundación" in r['categoria'])
+total_deslizamiento = len(df_comuna[df_comuna['categoria'].str.contains("Deslizamiento", na=False)]) + sum(1 for r in st.session_state.reportes_activos if "Deslizamiento" in r['categoria'])
+
+st.markdown("---")
+m1, m2, m3, m4 = st.columns(4)
+m1.metric("📊 Total Puntos Monitoreados", total_alertas_base + total_reportes_ciudadanos)
+m2.metric("🗑️ Alertas de Basuras", total_basura)
+m3.metric("🌊 Alertas de Inundación", total_inundacion)
+m4.metric("⛰️ Alertas de Deslizamiento", total_deslizamiento)
+st.markdown("---")
 
 col1, col2 = st.columns([1, 1])
 
@@ -123,11 +138,9 @@ with col1:
                     
                     st.image(res_img, caption="Análisis de IA completado", use_container_width=True)
                     
-                    # Coordenadas base en Comuna 4 para ubicar el reporte
                     lat_base = 6.2730
                     lon_base = -75.5580
                     
-                    # Agregar al estado de sesión persistente
                     nuevo_reporte_dict = {
                         "barrio": direccion_usuario,
                         "lat": lat_base,
@@ -138,7 +151,6 @@ with col1:
                     }
                     st.session_state.reportes_activos.append(nuevo_reporte_dict)
                     
-                    # Guardar también en el CSV físico
                     nuevo_reporte_df = pd.DataFrame([{
                         "barrio": direccion_usuario,
                         "direccion": direccion_usuario,
@@ -155,7 +167,6 @@ with col1:
                     df_actualizado.to_csv(CSV_FILE, index=False)
                     
                     st.success("✅ ¡Reporte publicado con éxito y guardado en el sistema!")
-                    
                     st.session_state.map_key += 1
                     st.rerun()
 
@@ -170,7 +181,14 @@ with col1:
     st.markdown("- ⚠️ **UNGRD (111):** [Llamar 111](tel:111)")
 
 with col2:
-    st.subheader("🗺️ Mapa WebGIS en Tiempo Real (Comuna 4)")
+    st.subheader("🗺️ Mapa WebGIS Interactivo con Filtros Dinámicos")
+    
+    # --- FILTROS DINÁMICOS POR CAPAS EN EL MAPA ---
+    st.markdown("**Filtrar capas en el mapa:**")
+    f_col1, f_col2, f_col3 = st.columns(3)
+    ver_basura = f_col1.checkbox("🗑️ Basuras", value=True)
+    ver_inundacion = f_col2.checkbox("🌊 Inundaciones", value=True)
+    ver_deslizamiento = f_col3.checkbox("⛰️ Deslizamientos", value=True)
     
     mapa = folium.Map(
         location=[6.2730, -75.5580],
@@ -178,37 +196,57 @@ with col2:
         tiles="OpenStreetMap"
     )
     
-    # 1. Dibujar los puntos predefinidos base del CSV que no tienen foto de reporte ciudadano
+    # 1. Dibujar puntos base filtrados
     for index, row in df_comuna.iterrows():
+        cat = str(row.get("categoria", ""))
         img_b64 = str(row.get("imagen_base64", ""))
-        if not img_b64 or img_b64 == "nan" or len(img_b64) <= 10:
+        
+        mostrar = False
+        if "Basuras" in cat and ver_basura:
+            mostrar = True
+        elif "Inundación" in cat and ver_inundacion:
+            mostrar = True
+        elif "Deslizamiento" in cat and ver_deslizamiento:
+            mostrar = True
+            
+        if mostrar and (not img_b64 or img_b64 == "nan" or len(img_b64) <= 10):
             folium.Marker(
                 location=[row["lat"], row["lon"]],
-                popup=f"<b>Ubicación:</b> {row['barrio']}<br><b>Categoría:</b> {row['categoria']}<br><b>Info:</b> {row.get('comentario', '')}",
+                popup=f"<b>Ubicación:</b> {row['barrio']}<br><b>Categoría:</b> {cat}<br><b>Info:</b> {row.get('comentario', '')}",
                 tooltip=row['barrio'],
                 icon=folium.Icon(color=row["color"], icon=row["icono"])
             ).add_to(mapa)
 
-    # 2. Dibujar todos los reportes activos almacenados en la sesión (con su respectiva foto y camarita 📸)
+    # 2. Dibujar reportes ciudadanos filtrados
     for r in st.session_state.reportes_activos:
-        img_b64 = r["imagen_base64"]
-        html_popup = f"""
-        <div style="width:220px; font-family: sans-serif;">
-            <b style="color: #d9534f;">🚨 Alerta Comuna 4</b><br>
-            <b>Ubicación:</b> {r['barrio']}<br>
-            <b>Categoría:</b> {r['categoria']}<br>
-            <b>Comentario:</b> {r['comentario']}<br><br>
-            <b>Evidencia Fotográfica:</b><br>
-            <img src="data:image/jpeg;base64,{img_b64}" width="200px" style="border-radius:6px; margin-top:4px;"/>
-        </div>
-        """
-        popup = folium.Popup(html_popup, max_width=250)
+        cat = r["categoria"]
+        mostrar = False
+        if "Basuras" in cat and ver_basura:
+            mostrar = True
+        elif "Inundación" in cat and ver_inundacion:
+            mostrar = True
+        elif "Deslizamiento" in cat and ver_deslizamiento:
+            mostrar = True
+            
+        if mostrar:
+            img_b64 = r["imagen_base64"]
+            html_popup = f"""
+            <div style="width:220px; font-family: sans-serif;">
+                <b style="color: #d9534f;">🚨 Alerta Comuna 4</b><br>
+                <b>Ubicación:</b> {r['barrio']}<br>
+                <b>Categoría:</b> {cat}<br>
+                <b>Comentario:</b> {r['comentario']}<br><br>
+                <b>Evidencia Fotográfica:</b><br>
+                <img src="data:image/jpeg;base64,{img_b64}" width="200px" style="border-radius:6px; margin-top:4px;"/>
+            </div>
+            """
+            popup = folium.Popup(html_popup, max_width=250)
+            
+            folium.Marker(
+                location=[r["lat"], r["lon"]],
+                popup=popup,
+                tooltip=f"Reporte Ciudadano 📸 - {r['barrio']}",
+                icon=folium.Icon(color="red", icon="camera", prefix="fa")
+            ).add_to(mapa)
         
-        folium.Marker(
-            location=[r["lat"], r["lon"]],
-            popup=popup,
-            tooltip=f"Reporte Ciudadano 📸 - {r['barrio']}",
-            icon=folium.Icon(color="red", icon="camera", prefix="fa")
-        ).add_to(mapa)
-        
-    st_folium(mapa, width=550, height=620, key=f"mapa_{st.session_state.map_key}")
+    st_folium(mapa, width=550, height=580, key=f"mapa_{st.session_state.map_key}")
